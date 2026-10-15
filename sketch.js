@@ -1,8 +1,7 @@
 // =====================================================================
-//  《无限镜屋 · Infinity Room》— 起始文件 / starter
-//  PART A（下面）是身体姿态引擎，不要修改。/ PART A (below) is the pose engine: don't change it.
-//  PART B 只留下 5 个 ★ 标记的函数：每一步让 Qwen 改写其中一个。
-//  PART B leaves 5 functions marked with ★: at each step, Qwen rewrites one of them.
+//  《无限镜屋 · Infinity Room》— 完成版 / finished
+//  PART A：身体姿态引擎 / pose engine · PART B：作品 / artwork
+//  5 个 ===== 标记的函数就是 5 个步骤的答案 / the 5 functions marked ===== are the answers to the 5 steps
 // =====================================================================
 
 
@@ -313,46 +312,66 @@ function draw() {
   }
 }
 
-// ★★★★★★ 第 1 步 开始 / STEP 1 START：glslHash（把整个函数换成 Qwen 写的版本 / replace the whole function with Qwen's version）★★★★★★
+// ===== 第 1 步 / STEP 1：glslHash（完成版 / finished）=====
+// GLSL：一个“随机数”函数。同一个格子永远得到同一个 0~1 的数
 function glslHash() {
-  // 临时版本：所有格子都一样 / placeholder: every cell is the same
   return `float hash(vec2 p) {
-  return 0.5;
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }`;
 }
-// ★★★★★★ 第 1 步 结束 / STEP 1 END ★★★★★★
+// ===== 第 1 步 结束 / STEP 1 END =====
 
-// ★★★★★★ 第 2 步 开始 / STEP 2 START：glslLight（把整个函数换成 Qwen 写的版本 / replace the whole function with Qwen's version）★★★★★★
+// ===== 第 2 步 / STEP 2：glslLight（完成版 / finished）=====
+// GLSL：一盏柔和的小灯：中间亮、边缘软，外面还有一圈淡淡的光晕
 function glslLight() {
-  // 临时版本：硬邦邦的圆点 / placeholder: a hard dot
   return `float light(vec2 p, vec2 c, float r) {
-  return step(length(p - c), r);
+  float d = length(p - c);
+  float core = smoothstep(r, r * 0.6, d);
+  float halo = exp(-d * d / (r * r) * 2.0) * 0.4;
+  return core + halo;
 }`;
 }
-// ★★★★★★ 第 2 步 结束 / STEP 2 END ★★★★★★
+// ===== 第 2 步 结束 / STEP 2 END =====
 
-// ★★★★★★ 第 3 步 开始 / STEP 3 START：glslBodyGlow（把整个函数换成 Qwen 写的版本 / replace the whole function with Qwen's version）★★★★★★
+// ===== 第 3 步 / STEP 3：glslBodyGlow（完成版 / finished）=====
+// GLSL：身体附近的光：离 12 个身体点越近，值越大（最大 1）
 function glslBodyGlow() {
-  // 临时版本：身体还不会发光 / placeholder: the body doesn't glow yet
   return `float bodyGlow(vec2 uv) {
-  return 0.0;
+  float g = 0.0;
+  for (int i = 0; i < 12; i++) {
+    float d = length((uv - uBody[i]) * vec2(uAspect, 1.0));
+    g += exp(-d * d * 80.0);
+  }
+  return min(g, 1.0);
 }`;
 }
-// ★★★★★★ 第 3 步 结束 / STEP 3 END ★★★★★★
+// ===== 第 3 步 结束 / STEP 3 END =====
 
-// ★★★★★★ 第 4 步 开始 / STEP 4 START：bodyUniform（把整个函数换成 Qwen 写的版本 / replace the whole function with Qwen's version）★★★★★★
+// ===== 第 4 步 / STEP 4：bodyUniform（完成版 / finished）=====
+// 把 12 个身体点变成 24 个 0~1 的数字，交给着色器；看不清的点放到很远的地方（-10）
 function bodyUniform(pose) {
-  // 临时版本：所有点都在很远的地方 / placeholder: every point is far away
-  return new Array(24).fill(-10);
+  const out = [];
+  for (const i of BODY_IDS) {
+    const p = pose ? pose[i] : null;
+    if (p && isVisible(p)) out.push(p.x / width, p.y / height);
+    else out.push(-10, -10);
+  }
+  return out;
 }
-// ★★★★★★ 第 4 步 结束 / STEP 4 END ★★★★★★
+// ===== 第 4 步 结束 / STEP 4 END =====
 
-// ★★★★★★ 第 5 步 开始 / STEP 5 START：pickRoom（把整个函数换成 Qwen 写的版本 / replace the whole function with Qwen's version）★★★★★★
+// ===== 第 5 步 / STEP 5：pickRoom（完成版 / finished）=====
+// 用姿势选房间：双手举过头顶 = 1（南瓜），双臂张得很开 = 2（永恒的爱），其他 = 0
 function pickRoom(pose) {
-  // 临时版本：永远是第一个房间 / placeholder: always the first room
+  if (!pose) return 0;
+  const nose = pose[0], lw = pose[15], rw = pose[16], ls = pose[11], rs = pose[12];
+  if (!isVisible(nose) || !isVisible(lw) || !isVisible(rw) || !isVisible(ls) || !isVisible(rs)) return 0;
+  if (lw.y < nose.y && rw.y < nose.y) return 1;
+  const shoulders = dist(ls.x, ls.y, rs.x, rs.y);
+  if (dist(lw.x, lw.y, rw.x, rw.y) > shoulders * 2.2) return 2;
   return 0;
 }
-// ★★★★★★ 第 5 步 结束 / STEP 5 END ★★★★★★
+// ===== 第 5 步 结束 / STEP 5 END =====
 
 // ---------- 下面这些已经写好了，不需要改 / already written, no need to change ----------
 
